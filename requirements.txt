@@ -1,0 +1,4 @@
+typer
+mysqlclient
+python-dotenv
+ollama
