@@ -121,7 +121,7 @@ Este enfoque permite que el proyecto sea agnóstico al modelo de IA, facilitando
 </p>
 
 <p align="center">
-	<img src="https://soniditos.com/cat_footer.svg" />
+	<img src="https://open.soniditos.com/cat_footer.svg" />
 </p>
 
 <p align="center">
