@@ -19,7 +19,7 @@ LLMQL es concepto de proyecto que consulta SQL directamente con lenguaje natural
 1. Clona el repositorio:
 
     ```bash
-    $ git clone https://github.com/sabiopobre/llmql.git
+    $ git clone https://github.com/virtuanista/llmql.git
     $ cd llmql
     ```
 
