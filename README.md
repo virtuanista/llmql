@@ -1,13 +1,14 @@
 # LLMQL
 
-LLMQL es concepto de proyecto que consulta SQL directamente con lenguaje natural utilizando un modelo local que entiende español e inglés, con énfasis en seguridad de solo lectura.
+LLMQL es un concepto de proyecto que consulta SQL directamente con lenguaje natural utilizando un modelo local que entiende español e inglés, con énfasis en seguridad de solo lectura.
 
 ## Características
 
 - Generación de consultas SQL a partir de lenguaje natural.
 - Conexión a MySQL.
+- Seguridad a nivel de base de datos: se conecta con un usuario dedicado de solo lectura, por lo que la protección no depende de validar la consulta en el código.
 - Registro y auditoría de cada consulta generada y ejecutada.
-- Modelo local: Permite integrar otro modelo de manera no muy compleja.
+- Modelo local: permite integrar otro modelo de manera no muy compleja.
 
 ## Requisitos
 
@@ -17,26 +18,43 @@ LLMQL es concepto de proyecto que consulta SQL directamente con lenguaje natural
 ## Instalación
 
 1. Clona el repositorio:
-
     ```bash
     $ git clone https://github.com/virtuanista/llmql.git
     $ cd llmql
     ```
 
 2. Instala las dependencias:
-
     ```bash
     $ pip install -r requirements.txt
     ```
 
-3. Configura las variables de entorno en el archivo `.env`:
+3. Crea un usuario de base de datos de solo lectura:
 
+    En lugar de usar `root` o un usuario con permisos de escritura, crea un usuario dedicado que solo pueda ejecutar `SELECT`. Así, aunque el modelo genere una consulta destructiva (`DROP`, `DELETE`, `UPDATE`, `INSERT`...), la propia base de datos la rechazará:
+
+    ```sql
+    CREATE USER 'llmql_readonly'@'localhost' IDENTIFIED BY 'contraseña_segura';
+    GRANT SELECT ON llmql.* TO 'llmql_readonly'@'localhost';
+    FLUSH PRIVILEGES;
+    ```
+
+    > 💡 Si quieres limitar aún más el alcance, concede `SELECT` solo sobre las tablas concretas que el asistente deba consultar: `GRANT SELECT ON llmql.ventas TO 'llmql_readonly'@'localhost';`
+
+4. Configura las variables de entorno en el archivo `.env` con el usuario de solo lectura:
     ```plaintext
     DB_HOST=localhost
-    DB_USER=root
-    DB_PASSWORD=your_password
+    DB_USER=llmql_readonly
+    DB_PASSWORD=contraseña_segura
     DB_NAME=llmql
     ```
+
+## Seguridad
+
+La estrategia de seguridad del proyecto se basa en el principio de mínimo privilegio:
+
+- **La base de datos es la barrera, no el código.** Validar en Python que la consulta empiece por `SELECT` es insuficiente: existen consultas que empiezan por `SELECT` y aun así pueden ser peligrosas (por ejemplo `SELECT ... INTO OUTFILE`, o funciones con efectos secundarios). Con un usuario que solo tiene el privilegio `SELECT`, cualquier intento de escritura, borrado o exportación falla directamente en MySQL.
+- **Defensa en profundidad.** El código mantiene una comprobación básica del formato de la consulta como primera capa, pero la garantía real la aporta el usuario de solo lectura.
+- **Auditoría.** Todas las consultas generadas y ejecutadas quedan registradas mediante `logger.py`, lo que permite revisar a posteriori qué SQL ha producido el modelo.
 
 ## Uso
 
@@ -61,6 +79,13 @@ Generated SQL: SELECT COUNT(*) FROM ventas WHERE fecha >= DATE_SUB(CURDATE(), IN
 Result: 150
 ```
 
+Si el modelo generase una consulta no permitida, la base de datos la rechazará por falta de privilegios:
+
+```plaintext
+Generated SQL: DELETE FROM ventas
+Error: (1142, "DELETE command denied to user 'llmql_readonly'@'localhost' for table 'ventas'")
+```
+
 ## Estructura del Proyecto
 
 ```
@@ -68,7 +93,7 @@ llmql/
 │
 ├── consulta_cli.py  # CLI principal
 ├── sql_generator.py # Interacción con el modelo local
-├── db_connector.py  # Conexión segura a MySQL
+├── db_connector.py  # Conexión segura a MySQL (usuario de solo lectura)
 ├── logger.py        # Logs y auditoría
 ├── .env             # Configuración de BD
 ├── requirements.txt # Dependencias del proyecto
@@ -94,6 +119,8 @@ def generate_sql(query: str) -> str:
         {'role': 'user', 'content': query}
     ])
     sql = response['message']['content']
+    # Comprobación básica de formato (primera capa).
+    # La seguridad real la garantiza el usuario de BD de solo lectura.
     if not sql.strip().upper().startswith("SELECT"):
         raise ValueError(f"La respuesta generada no es una consulta SQL válida: {sql}")
     return sql
@@ -112,7 +139,7 @@ response = nlp(query)
 return response["generated_text"]
 ```
 
-Este enfoque permite que el proyecto sea agnóstico al modelo de IA, facilitando la actualización o el cambio del modelo sin necesidad de modificar el código base.
+Este enfoque permite que el proyecto sea agnóstico al modelo de IA, facilitando la actualización o el cambio del modelo sin necesidad de modificar el código base. Gracias a que la seguridad recae en el usuario de solo lectura de la base de datos, cambiar de modelo no compromete la integridad de los datos.
 
 ## Licencia
 
