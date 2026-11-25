@@ -42,7 +42,7 @@ LLMQL es un concepto de proyecto que consulta SQL directamente con lenguaje natu
 
     > 💡 Si quieres limitar aún más el alcance, concede `SELECT` solo sobre las tablas concretas que el asistente deba consultar: `GRANT SELECT ON llmql.ventas TO 'llmql_readonly'@'localhost';`
 
-4. Configura las variables de entorno en el archivo `.env` con el usuario de solo lectura:
+4. Copia `example.env` como `.env` y configúralo con el usuario de solo lectura:
     ```plaintext
     DB_HOST=localhost
     DB_USER=llmql_readonly
@@ -81,11 +81,10 @@ Generated SQL: SELECT COUNT(*) FROM ventas WHERE fecha >= DATE_SUB(CURDATE(), IN
 Result: 150
 ```
 
-Si el modelo generase una consulta no permitida, la base de datos la rechazará por falta de privilegios:
+Si el modelo genera algo que no es una consulta `SELECT`, el código lo rechaza antes de llegar a la base de datos. Y si una consulta empezase por `SELECT` pero necesitase más privilegios, la rechazaría la propia base de datos:
 
 ```plaintext
-Generated SQL: DELETE FROM ventas
-Error: (1142, "DELETE command denied to user 'llmql_readonly'@'localhost' for table 'ventas'")
+Error: La respuesta generada no es una consulta SQL válida: DELETE FROM ventas
 ```
 
 ## Estructura del Proyecto
@@ -96,8 +95,8 @@ llmql/
 ├── consulta_cli.py  # CLI principal
 ├── sql_generator.py # Interacción con el modelo local
 ├── db_connector.py  # Conexión segura a MySQL (usuario de solo lectura)
-├── logger.py        # Logs y auditoría
-├── .env             # Configuración de BD
+├── logger.py        # Logs y auditoría (carpeta logs/)
+├── example.env      # Plantilla de configuración de BD (se copia como .env)
 ├── requirements.txt # Dependencias del proyecto
 └── README.md        # Documentación del proyecto
 ```
@@ -141,7 +140,7 @@ response = nlp(query)
 return response["generated_text"]
 ```
 
-Este enfoque permite que el proyecto sea agnóstico al modelo de IA, facilitando la actualización o el cambio del modelo sin necesidad de modificar el código base. Gracias a que la seguridad recae en el usuario de solo lectura de la base de datos, cambiar de modelo no compromete la integridad de los datos.
+Este enfoque permite que el proyecto sea agnóstico al modelo de IA, facilitando la actualización o el cambio del modelo modificando solo `sql_generator.py`. Gracias a que la seguridad recae en el usuario de solo lectura de la base de datos, cambiar de modelo no compromete la integridad de los datos.
 
 ## Licencia
 
@@ -158,5 +157,5 @@ Este enfoque permite que el proyecto sea agnóstico al modelo de IA, facilitando
 </p>
 
 <p align="center">
-	<a href="/LICENSE"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8"/></a>
+	<a href="LICENSE"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8"/></a>
 </p>

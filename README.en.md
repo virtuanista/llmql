@@ -42,7 +42,7 @@ LLMQL is a concept project that queries SQL directly in natural language using a
 
     > 💡 If you want to limit the scope further, grant `SELECT` only on the specific tables the assistant should query: `GRANT SELECT ON llmql.ventas TO 'llmql_readonly'@'localhost';`
 
-4. Set the environment variables in the `.env` file with the read-only user:
+4. Copy `example.env` to `.env` and set it up with the read-only user:
     ```plaintext
     DB_HOST=localhost
     DB_USER=llmql_readonly
@@ -81,11 +81,10 @@ Generated SQL: SELECT COUNT(*) FROM ventas WHERE fecha >= DATE_SUB(CURDATE(), IN
 Result: 150
 ```
 
-If the model generated a disallowed query, the database would reject it for lack of privileges:
+If the model generates something that is not a `SELECT` query, the code rejects it before it reaches the database. And if a query started with `SELECT` but needed more privileges, the database itself would reject it:
 
 ```plaintext
-Generated SQL: DELETE FROM ventas
-Error: (1142, "DELETE command denied to user 'llmql_readonly'@'localhost' for table 'ventas'")
+Error: La respuesta generada no es una consulta SQL válida: DELETE FROM ventas
 ```
 
 ## Project Structure
@@ -96,8 +95,8 @@ llmql/
 ├── consulta_cli.py  # Main CLI
 ├── sql_generator.py # Interaction with the local model
 ├── db_connector.py  # Secure MySQL connection (read-only user)
-├── logger.py        # Logs and auditing
-├── .env             # DB configuration
+├── logger.py        # Logs and auditing (logs/ folder)
+├── example.env      # DB configuration template (copied to .env)
 ├── requirements.txt # Project dependencies
 └── README.md        # Project documentation
 ```
@@ -141,7 +140,7 @@ response = nlp(query)
 return response["generated_text"]
 ```
 
-This approach keeps the project agnostic to the AI model, making it easy to update or change the model without modifying the codebase. Because security rests on the read-only database user, changing models does not compromise data integrity.
+This approach keeps the project agnostic to the AI model, making it easy to update or change the model by changing only `sql_generator.py`. Because security rests on the read-only database user, changing models does not compromise data integrity.
 
 ## License
 
@@ -158,5 +157,5 @@ This approach keeps the project agnostic to the AI model, making it easy to upda
 </p>
 
 <p align="center">
-	<a href="/LICENSE"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8"/></a>
+	<a href="LICENSE"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8"/></a>
 </p>

@@ -1,28 +1,27 @@
 import typer
-from sql_generator import generate_sql
+
 from db_connector import execute_query
 from logger import log_query
-import logging
+from sql_generator import generate_sql
 
 app = typer.Typer()
 
-logging.basicConfig(level=logging.DEBUG)
 
 @app.command()
-def consulta(query: str = typer.Option(..., prompt="¿Qué te gustaría consultar?")):
-    logging.debug(f'Received query: {query}')
+def consulta(query: str = typer.Argument(None, help="Pregunta en lenguaje natural.")):
+    if not query:
+        query = typer.prompt("¿Qué te gustaría consultar?")
     try:
         sql = generate_sql(query)
-        logging.debug(f'Generated SQL: {sql}')
-        if not sql.strip().upper().startswith("SELECT"):
-            raise ValueError(f"¡Prohibido ejecutar consultas que no sean SELECT! Respuesta generada: {sql}")
-        result = execute_query(sql)
-        logging.debug(f'Query result: {result}')
         log_query(query, sql)
-        print(result)  # Mostrar el resultado en la consola
-    except ValueError as e:
-        logging.error(e)
-        print(e)
+        print(f"Generated SQL: {sql}")
+        result = execute_query(sql)
+        # Un único valor se muestra sin la tupla que lo envuelve.
+        print(f"Result: {result[0][0] if len(result) == 1 and len(result[0]) == 1 else result}")
+    except Exception as e:
+        print(f"Error: {e}")
+        raise typer.Exit(code=1)
+
 
 if __name__ == "__main__":
     app()

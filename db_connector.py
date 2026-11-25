@@ -1,33 +1,30 @@
-import MySQLdb
 import os
+from pathlib import Path
+
+import MySQLdb
 from dotenv import load_dotenv
-import logging
 
-# Load the .env file
-load_dotenv(dotenv_path='d:/GitHub/llmql/.env')
+from logger import db_errors
 
-# Debug logging to verify environment variables
-logging.basicConfig(level=logging.DEBUG)
-logging.debug(f"DB_HOST: {os.getenv('DB_HOST')}")
-logging.debug(f"DB_USER: {os.getenv('DB_USER')}")
-logging.debug(f"DB_PASSWORD: {os.getenv('DB_PASSWORD')}")
-logging.debug(f"DB_NAME: {os.getenv('DB_NAME')}")
+load_dotenv(Path(__file__).with_name('.env'))
 
-connection = MySQLdb.connect(
-    host=os.getenv('DB_HOST'),
-    user=os.getenv('DB_USER'),
-    passwd=os.getenv('DB_PASSWORD'),
-    db=os.getenv('DB_NAME'),
-    auth_plugin='mysql_native_password'
-)
-
-logging.basicConfig(filename='logs/db_errors.log', level=logging.ERROR)
 
 def execute_query(query: str):
     try:
-        with connection.cursor() as cursor:
-            cursor.execute(query)
-            return cursor.fetchall()
+        connection = MySQLdb.connect(
+            host=os.getenv('DB_HOST'),
+            user=os.getenv('DB_USER'),
+            passwd=os.getenv('DB_PASSWORD'),
+            db=os.getenv('DB_NAME'),
+            auth_plugin='mysql_native_password'
+        )
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+                return cursor.fetchall()
+        finally:
+            connection.close()
     except MySQLdb.MySQLError as e:
-        logging.error(f'Error executing query: {e}')
+        # Solo el error: las credenciales nunca se registran.
+        db_errors.error(f'Error executing query: {e}')
         raise

@@ -6,6 +6,8 @@ def generate_sql(query: str) -> str:
         {'role': 'user', 'content': query}
     ])
     sql = response['message']['content']
+    # Comprobación básica de formato (primera capa).
+    # La seguridad real la garantiza el usuario de BD de solo lectura.
     if not sql.strip().upper().startswith("SELECT"):
         raise ValueError(f"La respuesta generada no es una consulta SQL válida: {sql}")
     return sql
