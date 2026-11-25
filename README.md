@@ -1,3 +1,5 @@
+<p align="center"><b>Español</b> · <a href="README.en.md">English</a></p>
+
 # LLMQL
 
 LLMQL es un concepto de proyecto que consulta SQL directamente con lenguaje natural utilizando un modelo local que entiende español e inglés, con énfasis en seguridad de solo lectura.
